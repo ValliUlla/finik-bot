@@ -40,34 +40,42 @@ async def delete_later(message, delay=15):
 
 
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     if not update.message:
         return
 
     user = update.effective_user
     chat = update.effective_chat
+    message = update.message
 
     if chat.id not in ALLOWED_CHATS:
         return
 
     try:
+        # 1. Если сообщение отправлено от имени группы/канала
+        #    (анонимный админ, linked channel и т.д.) — не трогаем
+        if message.sender_chat is not None:
+            return
 
-        # ПРОВЕРКА: если админ — ничего не делаем
+        # 2. Если вдруг Telegram не передал обычного пользователя — не трогаем
+        if user is None:
+            return
+
+        # 3. Админов и создателя чата не проверяем
         chat_member = await context.bot.get_chat_member(chat.id, user.id)
-
         if chat_member.status in ["administrator", "creator"]:
             return
 
-        # ПРОВЕРКА ПОДПИСКИ НА КАНАЛ
+        # 4. Проверяем подписку на основной канал
         member = await context.bot.get_chat_member(CHANNEL_ID, user.id)
 
+        # Если подписан — ничего не делаем
         if member.status not in ["left", "kicked"]:
             return
 
-        # НЕ ПОДПИСАН → удаляем сообщение
+        # Если не подписан — удаляем сообщение
         await context.bot.delete_message(
             chat_id=chat.id,
-            message_id=update.message.message_id
+            message_id=message.message_id
         )
 
         mention = user.mention_html()
@@ -90,7 +98,6 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 def main():
-
     app = Application.builder().token(TOKEN).build()
 
     app.add_handler(
