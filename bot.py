@@ -13,7 +13,6 @@ from telegram import (
 from telegram.ext import (
     Application,
     MessageHandler,
-    CallbackQueryHandler,
     ContextTypes,
     filters
 )
@@ -56,53 +55,7 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         member = await context.bot.get_chat_member(CHANNEL_ID, user.id)
 
-        if member.status in ["left", "kicked"]:
-
-            await context.bot.delete_message(
-                chat_id=chat.id,
-                message_id=update.message.message_id
-            )
-
-            mute_until = datetime.utcnow() + timedelta(days=3)
-
-            await context.bot.restrict_chat_member(
-                chat_id=chat.id,
-                user_id=user.id,
-                permissions=ChatPermissions(can_send_messages=False),
-                until_date=mute_until
-            )
-
-            mention = user.mention_html()
-
-            keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("Подписаться", url=CHANNEL_LINK)],
-                [InlineKeyboardButton("Я подписался", callback_data="check_sub")]
-            ])
-
-            msg = await context.bot.send_message(
-                chat_id=chat.id,
-                text=f"{mention}, чтобы писать в этом чате подпишитесь на канал.",
-                reply_markup=keyboard,
-                parse_mode="HTML"
-            )
-
-            asyncio.create_task(delete_later(msg))
-
-    except Exception as e:
-        logging.error(e)
-
-
-async def check_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    query = update.callback_query
-    user = query.from_user
-    chat = query.message.chat
-
-    await query.answer()
-
-    try:
-        member = await context.bot.get_chat_member(CHANNEL_ID, user.id)
-
+        # ЕСЛИ ПОДПИСАН — СНИМАЕМ МУТ
         if member.status not in ["left", "kicked"]:
 
             await context.bot.restrict_chat_member(
@@ -116,19 +69,37 @@ async def check_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             )
 
-            msg = await query.message.reply_text(
-                f"{user.mention_html()} теперь может писать в чате.",
-                parse_mode="HTML"
-            )
+            return
 
-            asyncio.create_task(delete_later(msg))
+        # ЕСЛИ НЕ ПОДПИСАН
+        await context.bot.delete_message(
+            chat_id=chat.id,
+            message_id=update.message.message_id
+        )
 
-        else:
+        mute_until = datetime.utcnow() + timedelta(days=3)
 
-            await query.answer(
-                "Вы ещё не подписались",
-                show_alert=True
-            )
+        await context.bot.restrict_chat_member(
+            chat_id=chat.id,
+            user_id=user.id,
+            permissions=ChatPermissions(can_send_messages=False),
+            until_date=mute_until
+        )
+
+        mention = user.mention_html()
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("Подписаться", url=CHANNEL_LINK)]
+        ])
+
+        msg = await context.bot.send_message(
+            chat_id=chat.id,
+            text=f"{mention}, чтобы писать в этом чате подпишитесь на канал.",
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+
+        asyncio.create_task(delete_later(msg))
 
     except Exception as e:
         logging.error(e)
@@ -143,10 +114,6 @@ def main():
             filters.TEXT & ~filters.COMMAND,
             check_subscription
         )
-    )
-
-    app.add_handler(
-        CallbackQueryHandler(check_button)
     )
 
     print("BOT STARTED")
