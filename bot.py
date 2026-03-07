@@ -33,9 +33,6 @@ CHANNEL_LINK = "https://t.me/+REqFc1k8aEc1MGQy"
 
 ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
 
-# защита от спама
-muted_users = {}
-
 
 async def delete_later(message, delay=20):
     await asyncio.sleep(delay)
@@ -61,11 +58,6 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         if member.status in ["left", "kicked"]:
 
-            # если уже мутнут — просто удаляем сообщение
-            if user.id in muted_users:
-                await context.bot.delete_message(chat.id, update.message.message_id)
-                return
-
             await context.bot.delete_message(
                 chat_id=chat.id,
                 message_id=update.message.message_id
@@ -80,8 +72,6 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 until_date=mute_until
             )
 
-            muted_users[user.id] = True
-
             mention = user.mention_html()
 
             keyboard = InlineKeyboardMarkup([
@@ -91,7 +81,7 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
             msg = await context.bot.send_message(
                 chat_id=chat.id,
-                text=f"{mention}, подпишитесь на канал чтобы писать в чате.",
+                text=f"{mention}, чтобы писать в этом чате подпишитесь на канал.",
                 reply_markup=keyboard,
                 parse_mode="HTML"
             )
@@ -126,26 +116,17 @@ async def check_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             )
 
-            if user.id in muted_users:
-                del muted_users[user.id]
-
-            msg = await context.bot.send_message(
-                chat_id=chat.id,
-                text=f"{user.mention_html()} теперь может писать.",
+            msg = await query.message.reply_text(
+                f"{user.mention_html()} теперь может писать в чате.",
                 parse_mode="HTML"
             )
 
             asyncio.create_task(delete_later(msg))
 
-            try:
-                await query.message.delete()
-            except:
-                pass
-
         else:
 
             await query.answer(
-                "Вы ещё не подписались на канал",
+                "Вы ещё не подписались",
                 show_alert=True
             )
 
