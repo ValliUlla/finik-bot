@@ -1,6 +1,5 @@
 import os
 import logging
-import asyncio
 from datetime import datetime, timedelta
 
 from telegram import (
@@ -33,14 +32,6 @@ CHANNEL_LINK = "https://t.me/+REqFc1k8aEc1MGQy"
 ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
 
 
-async def delete_later(message, delay=20):
-    await asyncio.sleep(delay)
-    try:
-        await message.delete()
-    except:
-        pass
-
-
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not update.message:
@@ -53,9 +44,10 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     try:
+
         member = await context.bot.get_chat_member(CHANNEL_ID, user.id)
 
-        # ЕСЛИ ПОДПИСАН — СНИМАЕМ МУТ
+        # ЕСЛИ ПОДПИСАН → снимаем мут
         if member.status not in ["left", "kicked"]:
 
             await context.bot.restrict_chat_member(
@@ -72,6 +64,7 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return
 
         # ЕСЛИ НЕ ПОДПИСАН
+
         await context.bot.delete_message(
             chat_id=chat.id,
             message_id=update.message.message_id
@@ -92,14 +85,12 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
             [InlineKeyboardButton("Подписаться", url=CHANNEL_LINK)]
         ])
 
-        msg = await context.bot.send_message(
+        await context.bot.send_message(
             chat_id=chat.id,
             text=f"{mention}, чтобы писать в этом чате подпишитесь на канал.",
             reply_markup=keyboard,
             parse_mode="HTML"
         )
-
-        asyncio.create_task(delete_later(msg))
 
     except Exception as e:
         logging.error(e)
@@ -111,7 +102,7 @@ def main():
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
+            filters.ALL & ~filters.COMMAND,
             check_subscription
         )
     )
