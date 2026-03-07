@@ -51,14 +51,20 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     try:
+
+        # ПРОВЕРКА: если админ — ничего не делаем
+        chat_member = await context.bot.get_chat_member(chat.id, user.id)
+
+        if chat_member.status in ["administrator", "creator"]:
+            return
+
+        # ПРОВЕРКА ПОДПИСКИ НА КАНАЛ
         member = await context.bot.get_chat_member(CHANNEL_ID, user.id)
 
-        # ЕСЛИ ПОДПИСАН — ничего не делаем
         if member.status not in ["left", "kicked"]:
             return
 
-        # ЕСЛИ НЕ ПОДПИСАН
-
+        # НЕ ПОДПИСАН → удаляем сообщение
         await context.bot.delete_message(
             chat_id=chat.id,
             message_id=update.message.message_id
