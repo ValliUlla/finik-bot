@@ -1,6 +1,6 @@
 import os
 import logging
-from telegram import Update
+from telegram import Update, ChatPermissions
 from telegram.ext import Application, MessageHandler, ContextTypes, filters
 
 logging.basicConfig(
