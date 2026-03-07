@@ -4,12 +4,17 @@ from telegram import Update
 from telegram.ext import Application, MessageHandler, ContextTypes, filters
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s | %(levelname)s | %(message)s",
     level=logging.INFO
 )
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+CHAT_POPUTCHIKI = int(os.getenv("CHAT_POPUTCHIKI"))
+CHAT_COURIERS = int(os.getenv("CHAT_COURIERS"))
+
+ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
+
 
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
@@ -18,29 +23,37 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user = update.effective_user
     chat = update.effective_chat
 
+    if chat.id not in ALLOWED_CHATS:
+        return
+
     try:
         member = await context.bot.get_chat_member(CHANNEL_ID, user.id)
+        status = member.status
 
-        if member.status in ["left", "kicked"]:
+        if status in ["left", "kicked"]:
             try:
                 await context.bot.delete_message(
                     chat_id=chat.id,
                     message_id=update.message.message_id
                 )
             except Exception as e:
-                logging.error(e)
+                logging.error(f"Не удалось удалить сообщение: {e}")
 
-            await context.bot.send_message(
-                chat_id=chat.id,
-                text="Чтобы писать в этом чате, подпишитесь на канал Финик визовый центр."
-            )
+            try:
+                await context.bot.send_message(
+                    chat_id=chat.id,
+                    text="Чтобы писать в этом чате, сначала подпишитесь на канал Финик визовый центр."
+                )
+            except Exception as e:
+                logging.error(f"Не удалось отправить сообщение: {e}")
 
     except Exception as e:
-        logging.error(e)
+        logging.error(f"Ошибка проверки подписки: {e}")
+
 
 def main():
     if not TOKEN:
-        raise ValueError("TELEGRAM_TOKEN не найден")
+        raise ValueError("Переменная TELEGRAM_TOKEN не найдена")
 
     app = Application.builder().token(TOKEN).build()
 
@@ -51,7 +64,9 @@ def main():
         )
     )
 
+    logging.info("Бот запущен")
     app.run_polling()
+
 
 if __name__ == "__main__":
     main()
