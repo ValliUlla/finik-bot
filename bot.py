@@ -1,5 +1,6 @@
 import os
 import logging
+import asyncio
 from datetime import datetime, timedelta
 
 from telegram import (
@@ -32,6 +33,35 @@ CHANNEL_LINK = "https://t.me/+REqFc1k8aEc1MGQy"
 ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
 
 
+async def auto_unmute(user_id, chat_id, context):
+
+    while True:
+        await asyncio.sleep(10)
+
+        try:
+            member = await context.bot.get_chat_member(CHANNEL_ID, user_id)
+
+            if member.status not in ["left", "kicked"]:
+
+                await context.bot.restrict_chat_member(
+                    chat_id=chat_id,
+                    user_id=user_id,
+                    permissions=ChatPermissions(
+                        can_send_messages=True,
+                        can_send_media_messages=True,
+                        can_send_other_messages=True,
+                        can_add_web_page_previews=True
+                    )
+                )
+
+                logging.info(f"user {user_id} unmuted")
+
+                break
+
+        except Exception as e:
+            logging.error(e)
+
+
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not update.message:
@@ -47,23 +77,8 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         member = await context.bot.get_chat_member(CHANNEL_ID, user.id)
 
-        # ЕСЛИ ПОДПИСАН → снимаем мут
         if member.status not in ["left", "kicked"]:
-
-            await context.bot.restrict_chat_member(
-                chat_id=chat.id,
-                user_id=user.id,
-                permissions=ChatPermissions(
-                    can_send_messages=True,
-                    can_send_media_messages=True,
-                    can_send_other_messages=True,
-                    can_add_web_page_previews=True
-                )
-            )
-
             return
-
-        # ЕСЛИ НЕ ПОДПИСАН
 
         await context.bot.delete_message(
             chat_id=chat.id,
@@ -91,6 +106,9 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
             reply_markup=keyboard,
             parse_mode="HTML"
         )
+
+        # запускаем автоматическую проверку подписки
+        asyncio.create_task(auto_unmute(user.id, chat.id, context))
 
     except Exception as e:
         logging.error(e)
