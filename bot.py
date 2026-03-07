@@ -1,7 +1,7 @@
 import os
 import logging
 import asyncio
-import time
+from datetime import datetime, timedelta
 
 from telegram import (
     Update,
@@ -29,12 +29,12 @@ CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 CHAT_POPUTCHIKI = int(os.getenv("CHAT_POPUTCHIKI"))
 CHAT_COURIERS = int(os.getenv("CHAT_COURIERS"))
 
-CHANNEL_LINK = "https://t.me/visacenter_vKSA"
+CHANNEL_LINK = "https://t.me/+REqFc1k8aEc1MGQy"
 
 ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
 
 
-async def delete_later(message, delay=15):
+async def delete_later(message, delay=20):
     await asyncio.sleep(delay)
     try:
         await message.delete()
@@ -63,31 +63,20 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 message_id=update.message.message_id
             )
 
-            # мут на 3 дня
-            until = int(time.time()) + (3 * 24 * 60 * 60)
+            mute_until = datetime.utcnow() + timedelta(days=3)
 
             await context.bot.restrict_chat_member(
                 chat_id=chat.id,
                 user_id=user.id,
                 permissions=ChatPermissions(can_send_messages=False),
-                until_date=until
+                until_date=mute_until
             )
 
             mention = user.mention_html()
 
             keyboard = InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "Подписаться",
-                        url=CHANNEL_LINK
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "Я подписался",
-                        callback_data="check_sub"
-                    )
-                ]
+                [InlineKeyboardButton("Подписаться", url=CHANNEL_LINK)],
+                [InlineKeyboardButton("Я подписался", callback_data="check_sub")]
             ])
 
             msg = await context.bot.send_message(
@@ -137,7 +126,7 @@ async def check_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
 
             await query.answer(
-                "Вы ещё не подписались",
+                "Вы ещё не подписались на канал",
                 show_alert=True
             )
 
@@ -160,7 +149,7 @@ def main():
         CallbackQueryHandler(check_button)
     )
 
-    logging.info("Bot started")
+    print("BOT STARTED")
 
     app.run_polling()
 
