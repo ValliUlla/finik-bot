@@ -40,10 +40,18 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 logging.error(f"Не удалось удалить сообщение: {e}")
 
             try:
-                await context.bot.send_message(
-                    chat_id=chat.id,
-                    text="Чтобы писать в этом чате, сначала подпишитесь на канал Финик визовый центр."
-                )
+                # мут пользователя
+await context.bot.restrict_chat_member(
+    chat_id=chat.id,
+    user_id=user.id,
+    permissions=ChatPermissions(can_send_messages=False)
+)
+
+# сообщение с ссылкой
+await context.bot.send_message(
+    chat_id=chat.id,
+    text="Чтобы писать в этом чате, сначала подпишитесь на канал:https://t.me/visacenter_vKSA"
+)
             except Exception as e:
                 logging.error(f"Не удалось отправить сообщение: {e}")
 
