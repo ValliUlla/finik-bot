@@ -28,7 +28,7 @@ CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 CHAT_POPUTCHIKI = int(os.getenv("CHAT_POPUTCHIKI"))
 CHAT_COURIERS = int(os.getenv("CHAT_COURIERS"))
 
-CHANNEL_LINK = "https://t.me/finik_vizovy_centr"
+CHANNEL_LINK = "https://t.me/visacenter_vKSA"
 
 ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
 
