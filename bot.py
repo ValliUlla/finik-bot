@@ -1,6 +1,7 @@
 import os
 import logging
 import asyncio
+import time
 
 from telegram import (
     Update,
@@ -62,10 +63,14 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 message_id=update.message.message_id
             )
 
+            # мут на 3 дня
+            until = int(time.time()) + (3 * 24 * 60 * 60)
+
             await context.bot.restrict_chat_member(
                 chat_id=chat.id,
                 user_id=user.id,
-                permissions=ChatPermissions(can_send_messages=False)
+                permissions=ChatPermissions(can_send_messages=False),
+                until_date=until
             )
 
             mention = user.mention_html()
