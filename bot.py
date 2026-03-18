@@ -22,11 +22,14 @@ logging.basicConfig(
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+CHANNEL_ID_1 = int(os.getenv("CHANNEL_ID"))
+CHANNEL_ID_2 = -1001910164289
+
 CHAT_POPUTCHIKI = int(os.getenv("CHAT_POPUTCHIKI"))
 CHAT_COURIERS = int(os.getenv("CHAT_COURIERS"))
 
-CHANNEL_LINK = "https://t.me/+REqFc1k8aEc1MGQy"
+CHANNEL_LINK_1 = "https://t.me/+REqFc1k8aEc1MGQy"
+CHANNEL_LINK_2 = "https://t.me/blogabdurauf"
 
 ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
 
@@ -51,28 +54,30 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     try:
-        # 1. Если сообщение отправлено от имени группы/канала
-        #    (анонимный админ, linked channel и т.д.) — не трогаем
+        # Игнор сообщений от имени группы / анонимных админов
         if message.sender_chat is not None:
             return
 
-        # 2. Если вдруг Telegram не передал обычного пользователя — не трогаем
         if user is None:
             return
 
-        # 3. Админов и создателя чата не проверяем
+        # Игнор админов
         chat_member = await context.bot.get_chat_member(chat.id, user.id)
         if chat_member.status in ["administrator", "creator"]:
             return
 
-        # 4. Проверяем подписку на основной канал
-        member = await context.bot.get_chat_member(CHANNEL_ID, user.id)
+        # Проверка подписки на оба канала
+        member1 = await context.bot.get_chat_member(CHANNEL_ID_1, user.id)
+        member2 = await context.bot.get_chat_member(CHANNEL_ID_2, user.id)
 
-        # Если подписан — ничего не делаем
-        if member.status not in ["left", "kicked"]:
+        subscribed_1 = member1.status not in ["left", "kicked"]
+        subscribed_2 = member2.status not in ["left", "kicked"]
+
+        # Если подписан на оба — ничего не делаем
+        if subscribed_1 and subscribed_2:
             return
 
-        # Если не подписан — удаляем сообщение
+        # Удаляем сообщение
         await context.bot.delete_message(
             chat_id=chat.id,
             message_id=message.message_id
@@ -80,13 +85,19 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         mention = user.mention_html()
 
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("Подписаться на канал", url=CHANNEL_LINK)]
-        ])
+        buttons = []
+
+        if not subscribed_1:
+            buttons.append([InlineKeyboardButton("Подписаться на Финик", url=CHANNEL_LINK_1)])
+
+        if not subscribed_2:
+            buttons.append([InlineKeyboardButton("Подписаться на блог", url=CHANNEL_LINK_2)])
+
+        keyboard = InlineKeyboardMarkup(buttons)
 
         msg = await context.bot.send_message(
             chat_id=chat.id,
-            text=f"{mention}, чтобы писать в этом чате подпишитесь на канал.",
+            text=f"{mention}, чтобы писать в этом чате подпишитесь на обязательные каналы.",
             reply_markup=keyboard,
             parse_mode="HTML"
         )
