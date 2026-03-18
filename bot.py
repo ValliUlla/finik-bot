@@ -29,7 +29,7 @@ CHAT_POPUTCHIKI = int(os.getenv("CHAT_POPUTCHIKI"))
 CHAT_COURIERS = int(os.getenv("CHAT_COURIERS"))
 
 CHANNEL_LINK_1 = "https://t.me/+REqFc1k8aEc1MGQy"
-CHANNEL_LINK_2 = "https://t.me/blogabdurauf"
+CHANNEL_LINK_2 = "https://t.me/+rN-v-DNLQaphNDFi"
 
 ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
 
