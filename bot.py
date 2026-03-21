@@ -54,50 +54,53 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     try:
-        # игнор сообщений от имени группы (анонимные админы)
+        # Игнор сообщений от имени группы / анонимных админов
         if message.sender_chat is not None:
             return
 
         if user is None:
             return
 
-        # игнор админов
+        # Игнор админов и создателя чата
         chat_member = await context.bot.get_chat_member(chat.id, user.id)
         if chat_member.status in ["administrator", "creator"]:
             return
 
-        # проверка подписки
+        # Проверка подписки на оба канала
         member1 = await context.bot.get_chat_member(CHANNEL_ID_1, user.id)
         member2 = await context.bot.get_chat_member(CHANNEL_ID_2, user.id)
 
         subscribed_1 = member1.status not in ["left", "kicked"]
         subscribed_2 = member2.status not in ["left", "kicked"]
 
-        # если подписан на оба — пропускаем
+        # Если подписан на оба — ничего не делаем
         if subscribed_1 and subscribed_2:
             return
 
-        # удаляем сообщение
+        # Удаляем сообщение неподписанного
         await context.bot.delete_message(
             chat_id=chat.id,
             message_id=message.message_id
         )
 
         mention = user.mention_html()
-
         buttons = []
 
         if not subscribed_1:
-            buttons.append([InlineKeyboardButton("Подписаться на FiNiK", url=CHANNEL_LINK_1)])
+            buttons.append([
+                InlineKeyboardButton("Подписаться на FiNiK", url=CHANNEL_LINK_1)
+            ])
 
         if not subscribed_2:
-            buttons.append([InlineKeyboardButton("Подписаться на БЛОГ", url=CHANNEL_LINK_2)])
+            buttons.append([
+                InlineKeyboardButton("Подписаться на БЛОГ", url=CHANNEL_LINK_2)
+            ])
 
         keyboard = InlineKeyboardMarkup(buttons)
 
         msg = await context.bot.send_message(
             chat_id=chat.id,
-            text=f"{mention}, чтобы писать в этом чате подпишитесь на FiNiK и БЛОГ.",
+            text=f"{mention}, чтобы писать в этом чате подпишитесь на обязательные каналы.",
             reply_markup=keyboard,
             parse_mode="HTML"
         )
@@ -105,7 +108,7 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
         asyncio.create_task(delete_later(msg))
 
     except Exception as e:
-        logging.error(e)
+        logging.error(f"Ошибка проверки подписки: {e}")
 
 
 def main():
