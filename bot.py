@@ -28,7 +28,7 @@ CHANNEL_ID_2 = -1001910164289
 CHAT_POPUTCHIKI = int(os.getenv("CHAT_POPUTCHIKI"))
 CHAT_COURIERS = int(os.getenv("CHAT_COURIERS"))
 
-CHANNEL_LINK_1 = "https://t.me/+REqFc1k8aEc1MGQy"
+CHANNEL_LINK_1 = "https://t.me/+GB5IKixNa8pmMzUy"
 CHANNEL_LINK_2 = "https://t.me/+eTbePnqsrdIwZDgy"
 
 ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
@@ -88,7 +88,7 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         if not subscribed_1:
             buttons.append([
-                InlineKeyboardButton("Подписаться на FiNiK", url=CHANNEL_LINK_1)
+                InlineKeyboardButton("Подписаться на РАБОТА KSA", url=CHANNEL_LINK_1)
             ])
 
         if not subscribed_2:
