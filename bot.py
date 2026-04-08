@@ -22,35 +22,89 @@ logging.basicConfig(
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 
-CHANNEL_ID_1 = int(os.getenv("CHANNEL_ID"))
-CHANNEL_ID_2 = -1001910164289
-
 CHAT_POPUTCHIKI = int(os.getenv("CHAT_POPUTCHIKI"))
 CHAT_COURIERS = int(os.getenv("CHAT_COURIERS"))
 
-CHANNEL_LINK_1 = "https://t.me/+GB5IKixNa8pmMzUy"
-CHANNEL_LINK_2 = "https://t.me/+eTbePnqsrdIwZDgy"
+CHANNEL_WORK = {
+    "id": -1002002128681,
+    "name": "Работа в КСА",
+    "link": "https://t.me/+GB5IKixNa8pmMzUy"
+}
 
-ALLOWED_CHATS = {CHAT_POPUTCHIKI, CHAT_COURIERS}
+CHANNEL_COURIERS = {
+    "id": -1002026737566,
+    "name": "Курьеры",
+    "link": "https://t.me/+eTbePnqsrdIwZDgy"
+}
 
 
 async def delete_later(message, delay=15):
     await asyncio.sleep(delay)
     try:
         await message.delete()
-    except:
+    except Exception:
         pass
+
+
+def get_required_channels(chat_id):
+    if chat_id == CHAT_POPUTCHIKI:
+        return [CHANNEL_WORK, CHANNEL_COURIERS]
+
+    if chat_id == CHAT_COURIERS:
+        return [CHANNEL_WORK]
+
+    return []
+
+
+def build_buttons(missing_channels):
+    buttons = []
+
+    for channel in missing_channels:
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"Подписаться на {channel['name']}",
+                url=channel["link"]
+            )
+        ])
+
+    return InlineKeyboardMarkup(buttons)
+
+
+def build_text(mention, missing_channels):
+    names = [channel["name"] for channel in missing_channels]
+
+    if len(names) == 1:
+        return f"{mention}, чтобы писать в этом чате подпишитесь на {names[0]}."
+
+    if len(names) == 2:
+        return f"{mention}, чтобы писать в этом чате подпишитесь на {names[0]} и {names[1]}."
+
+    joined = ", ".join(names[:-1]) + f" и {names[-1]}"
+    return f"{mention}, чтобы писать в этом чате подпишитесь на {joined}."
+
+
+async def get_missing_channels(user_id, bot, required_channels):
+    missing_channels = []
+
+    for channel in required_channels:
+        member = await bot.get_chat_member(channel["id"], user_id)
+        status = member.status
+
+        if status in ["left", "kicked"]:
+            missing_channels.append(channel)
+
+    return missing_channels
 
 
 async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
 
-    user = update.effective_user
-    chat = update.effective_chat
     message = update.message
+    chat = update.effective_chat
+    user = update.effective_user
 
-    if chat.id not in ALLOWED_CHATS:
+    if chat.id not in {CHAT_POPUTCHIKI, CHAT_COURIERS}:
         return
 
     try:
@@ -61,51 +115,36 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if user is None:
             return
 
-        # Игнор админов и создателя чата
-        chat_member = await context.bot.get_chat_member(chat.id, user.id)
-        if chat_member.status in ["administrator", "creator"]:
+        # Игнор админов и владельца чата
+        group_member = await context.bot.get_chat_member(chat.id, user.id)
+        if group_member.status in ["administrator", "creator"]:
             return
 
-        # Проверка подписки на оба канала
-        member1 = await context.bot.get_chat_member(CHANNEL_ID_1, user.id)
-        member2 = await context.bot.get_chat_member(CHANNEL_ID_2, user.id)
+        required_channels = get_required_channels(chat.id)
+        missing_channels = await get_missing_channels(user.id, context.bot, required_channels)
 
-        subscribed_1 = member1.status not in ["left", "kicked"]
-        subscribed_2 = member2.status not in ["left", "kicked"]
-
-        # Если подписан на оба — ничего не делаем
-        if subscribed_1 and subscribed_2:
+        # Если все условия выполнены — ничего не делаем
+        if not missing_channels:
             return
 
-        # Удаляем сообщение неподписанного
+        # Удаляем сообщение
         await context.bot.delete_message(
             chat_id=chat.id,
             message_id=message.message_id
         )
 
         mention = user.mention_html()
-        buttons = []
+        keyboard = build_buttons(missing_channels)
+        text = build_text(mention, missing_channels)
 
-        if not subscribed_1:
-            buttons.append([
-                InlineKeyboardButton("Подписаться на РАБОТА KSA", url=CHANNEL_LINK_1)
-            ])
-
-        if not subscribed_2:
-            buttons.append([
-                InlineKeyboardButton("Подписаться на чат Курьеры", url=CHANNEL_LINK_2)
-            ])
-
-        keyboard = InlineKeyboardMarkup(buttons)
-
-        msg = await context.bot.send_message(
+        bot_message = await context.bot.send_message(
             chat_id=chat.id,
-            text=f"{mention}, чтобы писать в этом чате подпишитесь на обязательные каналы.",
+            text=text,
             reply_markup=keyboard,
             parse_mode="HTML"
         )
 
-        asyncio.create_task(delete_later(msg))
+        asyncio.create_task(delete_later(bot_message))
 
     except Exception as e:
         logging.error(f"Ошибка проверки подписки: {e}")
