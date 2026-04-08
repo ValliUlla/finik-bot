@@ -27,15 +27,18 @@ CHAT_COURIERS = int(os.getenv("CHAT_COURIERS"))
 
 CHANNEL_WORK = {
     "id": -1002002128681,
-    "name": "Работа в КСА",
+    "name": "РАБОТА KSA",
     "link": "https://t.me/+GB5IKixNa8pmMzUy"
 }
 
 CHANNEL_COURIERS = {
     "id": -1002026737566,
-    "name": "Курьеры",
+    "name": "чат Курьеры",
     "link": "https://t.me/+eTbePnqsrdIwZDgy"
 }
+
+# Чтобы не плодить кучу сообщений бота одному и тому же человеку
+last_bot_messages = {}
 
 
 async def delete_later(message, delay=15):
@@ -127,11 +130,19 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if not missing_channels:
             return
 
-        # Удаляем сообщение
+        # Удаляем сообщение пользователя
         await context.bot.delete_message(
             chat_id=chat.id,
             message_id=message.message_id
         )
+
+        # Удаляем старое предупреждение бота этому пользователю, если было
+        old_message_id = last_bot_messages.get((chat.id, user.id))
+        if old_message_id:
+            try:
+                await context.bot.delete_message(chat_id=chat.id, message_id=old_message_id)
+            except Exception:
+                pass
 
         mention = user.mention_html()
         keyboard = build_buttons(missing_channels)
@@ -143,6 +154,8 @@ async def check_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE)
             reply_markup=keyboard,
             parse_mode="HTML"
         )
+
+        last_bot_messages[(chat.id, user.id)] = bot_message.message_id
 
         asyncio.create_task(delete_later(bot_message))
 
